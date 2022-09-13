@@ -75,7 +75,9 @@ const scrape = async (urls, email, secret) => {
     );
   }
 
-  await sendEmail(results[email], email, secret);
+  if (results[email].length > 0) {
+    await sendEmail(results[email], email, secret);
+  }
 };
 
 const sendEmail = async (links, email, secret) => {
