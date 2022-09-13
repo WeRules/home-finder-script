@@ -37,7 +37,7 @@ const runTask = async () => {
   const sheetName = workbook.SheetNames[0];
   const spreadsheetData = utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
-  const disableds = spreadsheetData.filter((row) => row.disable.toLowerCase() === 'true').map((row) => row.secret);
+  const disableds = spreadsheetData.filter((row) => row.disable?.toLowerCase() === 'true').map((row) => row.secret);
   for (const row of spreadsheetData) {
     if (disableds.includes(row.secret)) {
       continue;
