@@ -65,13 +65,13 @@ const scrape = async (urls, email, secret) => {
   if (results[email].length > 0) {
     writeFileSync(
         path.resolve(__dirname, 'db.json'),
-      JSON.stringify({
-        ...pastResults,
-        [email]: [
-          ...pastResults[email],
-          ...results[email],
-        ]
-      })
+        JSON.stringify({
+          ...pastResults,
+          [email]: [
+            ...pastResults[email],
+            ...results[email],
+          ]
+        })
     );
   }
 
@@ -142,10 +142,13 @@ const runPuppeteer = async (url, email) => {
       dom.window.document
           .querySelectorAll('.search-result')
           ?.forEach((element) => {
-            const urlPath = element?.querySelectorAll('a')?.[0]?.href;
+            let path = element?.querySelectorAll('a')?.[0]?.href;
 
-            const path = `https://www.funda.nl${urlPath}`;
-            if (urlPath && !pastResults[email]?.includes(path)) {
+            if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('funda.nl'))) {
+              path = `https://www.funda.nl${path}`;
+            }
+
+            if (path && !pastResults[email]?.includes(path)) {
               results[email].push(path);
             }
           });
@@ -171,7 +174,11 @@ const runPuppeteer = async (url, email) => {
       for (const div of result) {
         const anchor = div?.querySelector('a');
         const dateText = anchor?.querySelector('div')?.innerText;
-        const path = anchor?.href;
+        let path = anchor?.href;
+
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('vbo.nl'))) {
+          path = `https://www.vbo.nl${path}`;
+        }
 
         if (
             path &&
@@ -201,9 +208,12 @@ const runPuppeteer = async (url, email) => {
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
-        const urlPath = anchor?.href;
+        let path = anchor?.href;
 
-        const path = `https://www.huislijn.nl${urlPath}`;
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('huislijn.nl'))) {
+          path = `https://www.huislijn.nl${path}`;
+        }
+
         if (path && !pastResults[email]?.includes(path)) {
           results[email].push(path);
         }
@@ -238,8 +248,11 @@ const runPuppeteer = async (url, email) => {
       for (const div of result) {
         const anchor = div?.querySelector('a');
         const dateText = div?.querySelector('.date')?.innerText || div?.querySelector('.date')?.innerHTML;
-        const urlPath = anchor?.href;
-        const path = `https://www.zah.nl${urlPath}`;
+        let path = anchor?.href;
+
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('zah.nl'))) {
+          path = `https://www.zah.nl${path}`;
+        }
 
         if (
             path &&
@@ -272,11 +285,14 @@ const runPuppeteer = async (url, email) => {
       for (const div of result) {
         const anchor = div?.querySelector('a');
         const dateText = div?.querySelector('.listing-label--new')?.innerText;
-        const urlPath = anchor?.href;
+        let path = anchor?.href;
 
-        const path = `https://www.pararius.nl${urlPath}`;
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('pararius.nl'))) {
+          path = `https://www.pararius.nl${path}`;
+        }
+
         if (
-            urlPath &&
+            path &&
             !pastResults[email]?.includes(path) &&
             dateText?.toLowerCase().includes('nieuw')
         ) {
@@ -304,7 +320,11 @@ const runPuppeteer = async (url, email) => {
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
-        const path = anchor?.href;
+        let path = anchor?.href;
+
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('jaap.nl'))) {
+          path = `https://www.jaap.nl${path}`;
+        }
 
         if (path && !pastResults[email]?.includes(path)) {
           results[email].push(path);
@@ -331,9 +351,12 @@ const runPuppeteer = async (url, email) => {
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
-        const urlPath = anchor?.href;
+        let path = anchor?.href;
 
-        const path = `https://hoekstraenvaneck.nl${urlPath}`;
+        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('hoekstraenvaneck.nl'))) {
+          path = `https://www.hoekstraenvaneck.nl${path}`;
+        }
+
         if (path && !pastResults[email]?.includes(path)) {
           results[email].push(path);
         }
