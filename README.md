@@ -22,3 +22,9 @@ To deploy this project, you will need to do the following steps:
 6. Update [the cron job frequency](https://github.com/WeRules/home-finder-script/blob/main/.github/workflows/run-task.yml#L5) to match your needs.
 7. Push your changes to the `main` branch and the script will automatically run accordingly with the cron job settings.
 
+## Release Notes
+- **v0.2.0:**
+   - Add check for valid email and valid URL
+   - Add bugs to fix later
+- **v0.1.0:**
+   - First version

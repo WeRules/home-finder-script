@@ -9,6 +9,8 @@ const jsdom = require('jsdom');
 const { read, utils } = require('xlsx');
 const nodeFetch = require('node-fetch');
 const nodemailer = require('nodemailer');
+const validUrl = require('valid-url');
+const { validate: validateEmail } = require('email-validator');
 
 const WIDTH = 1920;
 const HEIGHT = 1080;
@@ -57,7 +59,9 @@ const scrape = async (urls, email, secret) => {
   }
 
   for (const url of urls) {
-    await runPuppeteer(url, email);
+    if (validUrl.isUri(url)) {
+      await runPuppeteer(url, email);
+    }
   }
 
   console.log('results:', results);
@@ -81,6 +85,10 @@ const scrape = async (urls, email, secret) => {
 };
 
 const sendEmail = async (links, email, secret) => {
+  if (!validateEmail(email)) {
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
