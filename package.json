@@ -1,6 +1,6 @@
 {
     "name": "home-finder-script",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Home Finder Script",
     "main": "index.js",
     "author": "Pablo Pirata",
@@ -14,11 +14,11 @@
         "task": "node scraper.js"
     },
     "dependencies": {
-        "dotenv": "^16.0.2",
+        "dotenv": "^16.0.3",
         "email-validator": "^2.0.4",
         "jsdom": "^20.0.0",
         "node-fetch": "^2.6.7",
-        "nodemailer": "^6.7.8",
+        "nodemailer": "^6.8.0",
         "puppeteer": "^17.1.3",
         "valid-url": "^1.0.9",
         "xlsx": "^0.18.5"
