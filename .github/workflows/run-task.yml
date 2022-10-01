@@ -22,6 +22,7 @@ jobs:
         env:
           GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
           GOOGLE_SPREADSHEET_GID: ${{ secrets.GOOGLE_SPREADSHEET_GID }}
+          TELEGRAM_BOT_ID: ${{ secrets.TELEGRAM_BOT_ID }}
           USER_AGENT: ${{ secrets.USER_AGENT }}
           EMAIL_USER: ${{ secrets.EMAIL_USER}}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD}}
