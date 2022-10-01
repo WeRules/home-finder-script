@@ -16,6 +16,15 @@ const WIDTH = 1920;
 const HEIGHT = 1080;
 const TIMEOUT = 10000;
 
+const {
+  USER_AGENT,
+  EMAIL_USER,
+  EMAIL_PASSWORD,
+  TELEGRAM_BOT_ID,
+  GOOGLE_SPREADSHEET_ID,
+  GOOGLE_SPREADSHEET_GID,
+} = process.env;
+
 const downloadSpreadsheetFile = async (spreadsheetId, sheetId = 0) => {
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx&gid=${sheetId}`;
   const response = await nodeFetch(url);
@@ -30,11 +39,11 @@ try {
 }
 
 const pastResults = JSON.parse(data) || [];
-console.log('pastResults:', pastResults);
+// console.log('pastResults:', pastResults);
 const results = {};
 
 const runTask = async () => {
-  const spreadsheet = await downloadSpreadsheetFile(process.env.GOOGLE_SPREADSHEET_ID, process.env.GOOGLE_SPREADSHEET_GID);
+  const spreadsheet = await downloadSpreadsheetFile(GOOGLE_SPREADSHEET_ID, GOOGLE_SPREADSHEET_GID);
   const workbook = read(await spreadsheet.arrayBuffer(), { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   const spreadsheetData = utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
@@ -42,14 +51,15 @@ const runTask = async () => {
   const disableds = spreadsheetData.filter((row) => row.disable?.toLowerCase() === 'true').map((row) => row.secret);
   for (const row of spreadsheetData) {
     if (disableds.includes(row.secret)) {
+      // TODO clean-up db.json database
       continue;
     }
 
-    await scrape(row.links.split('\n'), row.email, row.secret);
+    await scrape(row.links.split('\n'), row.email, row.secret, row.telegram_group_id);
   }
 };
 
-const scrape = async (urls, email, secret) => {
+const scrape = async (urls, email, secret, telegramGroupId) => {
   if (!results[email]) {
     results[email] = [];
   }
@@ -64,23 +74,37 @@ const scrape = async (urls, email, secret) => {
     }
   }
 
-  console.log('results:', results);
+  // console.log('results:', results);
 
   if (results[email].length > 0) {
     writeFileSync(
-        path.resolve(__dirname, 'db.json'),
-        JSON.stringify({
-          ...pastResults,
-          [email]: [
-            ...pastResults[email],
-            ...results[email],
-          ]
-        })
+      path.resolve(__dirname, 'db.json'),
+      JSON.stringify({
+        ...pastResults,
+        [email]: [
+          ...pastResults[email],
+          ...results[email],
+        ]
+      })
     );
   }
 
   if (results[email].length > 0) {
     await sendEmail(results[email], email, secret);
+
+    if (TELEGRAM_BOT_ID) {
+      await nodeFetch(`https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: `New houses found:\n\n${results[email].join('\n')}`,
+          "chat_id": telegramGroupId,
+          "parse_mode": "markdown",
+        }),
+      });
+    }
   }
 };
 
@@ -92,25 +116,25 @@ const sendEmail = async (links, email, secret) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
+      user: EMAIL_USER,
+      pass: EMAIL_PASSWORD
     }
   });
 
-  const htmlTemplate = readFileSync(path.resolve(__dirname, 'template.html'), { encoding: 'utf8', flag: 'r' });
+  const htmlTemplate = readFileSync(path.resolve(__dirname, 'template.html'), {encoding: 'utf8', flag: 'r'});
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: EMAIL_USER,
     to: email,
     subject: 'New Houses Found',
     // text: links.join('\n'),
     html: htmlTemplate
-        .replace('{{SECRET}}', secret)
-        .replace('{{LINKS_LIST}}', links.map((link) => {
-          return `<li><a href="${link}">${link}</a></li>`;
-        }).join('\n')),
+      .replace('{{SECRET}}', secret)
+      .replace('{{LINKS_LIST}}', links.map((link) => {
+        return `<li><a href="${link}">${link}</a></li>`;
+      }).join('\n')),
   };
 
-  transporter.sendMail(mailOptions, function(error, info){
+  transporter.sendMail(mailOptions, function (error, info) {
     if (error) {
       console.log(error);
     } else {
@@ -120,7 +144,7 @@ const sendEmail = async (links, email, secret) => {
 };
 
 const runPuppeteer = async (url, email) => {
-  console.log('opening headless browser');
+  // console.log('opening headless browser');
   const browser = await puppeteer.launch({
     headless: true,
     args: [`--window-size=${WIDTH},${HEIGHT}`],
@@ -132,15 +156,15 @@ const runPuppeteer = async (url, email) => {
 
   const page = await browser.newPage();
   // https://stackoverflow.com/a/51732046/4307769 https://stackoverflow.com/a/68780400/4307769
-  await page.setUserAgent(process.env.USER_AGENT);
+  await page.setUserAgent(USER_AGENT);
 
-  console.log('going to website', url);
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  // console.log('going to website', url);
+  await page.goto(url, {waitUntil: 'domcontentloaded'});
   await page.waitForNetworkIdle();
 
   if (url.includes('funda.nl/')) {
     try {
-      console.log('parsing funda.nl data');
+      // console.log('parsing funda.nl data');
       await page.waitForSelector('.search-result', {
         timeout: TIMEOUT,
         visible: true,
@@ -150,24 +174,24 @@ const runPuppeteer = async (url, email) => {
       const dom = new jsdom.JSDOM(htmlString);
 
       dom.window.document
-          .querySelectorAll('.search-result')
-          ?.forEach((element) => {
-            let path = element?.querySelectorAll('a')?.[0]?.href;
+        .querySelectorAll('.search-result')
+        ?.forEach((element) => {
+          let path = element?.querySelectorAll('a')?.[0]?.href;
 
-            if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('funda.nl'))) {
-              path = `https://www.funda.nl${path}`;
-            }
+          if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('funda.nl'))) {
+            path = `https://www.funda.nl${path}`;
+          }
 
-            if (path && !pastResults[email]?.includes(path)) {
-              results[email].push(path);
-            }
-          });
+          if (path && !pastResults[email]?.includes(path)) {
+            results[email].push(path);
+          }
+        });
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('vbo.nl/')) {
     try {
-      console.log('parsing vbo.nl data');
+      // console.log('parsing vbo.nl data');
       await page.waitForSelector('#propertiesWrapper', {
         timeout: TIMEOUT,
         visible: true,
@@ -177,9 +201,9 @@ const runPuppeteer = async (url, email) => {
       const dom = new jsdom.JSDOM(htmlString);
 
       const result =
-          dom.window.document
-              .querySelector('#propertiesWrapper')
-              ?.querySelector('.row')?.children || [];
+        dom.window.document
+          .querySelector('#propertiesWrapper')
+          ?.querySelector('.row')?.children || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -191,19 +215,19 @@ const runPuppeteer = async (url, email) => {
         }
 
         if (
-            path &&
-            !pastResults[email]?.includes(path) &&
-            dateText?.toLowerCase()?.includes('nieuw')
+          path &&
+          !pastResults[email]?.includes(path) &&
+          dateText?.toLowerCase()?.includes('nieuw')
         ) {
           results[email].push(path);
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('huislijn.nl/')) {
     try {
-      console.log('parsing huislijn.nl data');
+      // console.log('parsing huislijn.nl data');
       await page.waitForSelector('.hl-search-object-display', {
         timeout: TIMEOUT,
         visible: true,
@@ -212,9 +236,9 @@ const runPuppeteer = async (url, email) => {
       const htmlString = await page.content();
       const dom = new jsdom.JSDOM(htmlString);
       const result =
-          dom.window.document
-              .querySelector('.wrapper-objects')
-              ?.querySelectorAll('.hl-search-object-display') || [];
+        dom.window.document
+          .querySelector('.wrapper-objects')
+          ?.querySelectorAll('.hl-search-object-display') || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -229,11 +253,11 @@ const runPuppeteer = async (url, email) => {
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('zah.nl/')) {
     try {
-      console.log('parsing zah.nl data');
+      // console.log('parsing zah.nl data');
       await page.waitForNavigation({
         waitUntil: 'load',
         timeout: TIMEOUT,
@@ -246,14 +270,14 @@ const runPuppeteer = async (url, email) => {
       const htmlString = await page.content();
       const dom = new jsdom.JSDOM(htmlString);
       // writeFileSync(
-      //     path.resolve(__dirname, 'test.html'),
-      //     htmlString
+      //   path.resolve(__dirname, 'test.html'),
+      //   htmlString
       // );
 
       const result =
-          dom.window.document
-              .querySelector('#koopwoningen')
-              ?.querySelectorAll('.result') || [];
+        dom.window.document
+          .querySelector('#koopwoningen')
+          ?.querySelectorAll('.result') || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -265,20 +289,19 @@ const runPuppeteer = async (url, email) => {
         }
 
         if (
-            path &&
-            !pastResults[email]?.includes(path) &&
-            dateText?.toLowerCase().includes('1 dag')
+          path &&
+          !pastResults[email]?.includes(path) &&
+          dateText?.toLowerCase().includes('1 dag')
         ) {
           results[email].push(path);
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('pararius.nl/')) {
     try {
-      console.log('parsing pararius.nl data');
-      console.log('parsing zah.nl data');
+      // console.log('parsing pararius.nl data');
       await page.waitForSelector('.search-list__item--listing', {
         timeout: TIMEOUT,
         visible: true,
@@ -288,9 +311,9 @@ const runPuppeteer = async (url, email) => {
       const dom = new jsdom.JSDOM(htmlString);
 
       const result =
-          dom.window.document
-              .querySelector('.search-list')
-              ?.querySelectorAll('.search-list__item--listing') || [];
+        dom.window.document
+          .querySelector('.search-list')
+          ?.querySelectorAll('.search-list__item--listing') || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -302,19 +325,19 @@ const runPuppeteer = async (url, email) => {
         }
 
         if (
-            path &&
-            !pastResults[email]?.includes(path) &&
-            dateText?.toLowerCase().includes('nieuw')
+          path &&
+          !pastResults[email]?.includes(path) &&
+          dateText?.toLowerCase().includes('nieuw')
         ) {
           results[email].push(path);
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('jaap.nl/')) {
     try {
-      console.log('parsing jaap.nl data');
+      // console.log('parsing jaap.nl data');
       await page.waitForSelector('.property-list', {
         timeout: TIMEOUT,
         visible: true,
@@ -324,9 +347,9 @@ const runPuppeteer = async (url, email) => {
       const dom = new jsdom.JSDOM(htmlString);
 
       const result =
-          dom.window.document
-              .querySelector('.property-list')
-              ?.querySelectorAll('[id^="house_"]') || [];
+        dom.window.document
+          .querySelector('.property-list')
+          ?.querySelectorAll('[id^="house_"]') || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -341,11 +364,11 @@ const runPuppeteer = async (url, email) => {
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   } else if (url.includes('hoekstraenvaneck.nl/')) {
     try {
-      console.log('parsing hoekstraenvaneck.nl data');
+      // console.log('parsing hoekstraenvaneck.nl data');
       await page.waitForSelector('.overzicht', {
         timeout: TIMEOUT,
         visible: true,
@@ -355,9 +378,9 @@ const runPuppeteer = async (url, email) => {
       const dom = new jsdom.JSDOM(htmlString);
 
       const result =
-          dom.window.document
-              .querySelector('.overzicht')
-              ?.querySelectorAll('.woning') || [];
+        dom.window.document
+          .querySelector('.overzicht')
+          ?.querySelectorAll('.woning') || [];
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
@@ -372,12 +395,22 @@ const runPuppeteer = async (url, email) => {
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   }
 
-  console.log('closing browser');
+  // console.log('closing browser');
   await browser.close();
 };
 
-runTask();
+if (
+  USER_AGENT
+  && EMAIL_USER
+  && EMAIL_PASSWORD
+  && GOOGLE_SPREADSHEET_ID
+  && GOOGLE_SPREADSHEET_GID
+) {
+  runTask();
+} else {
+    console.log("You're missing an enviroment key");
+}

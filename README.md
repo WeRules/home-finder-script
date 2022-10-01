@@ -18,13 +18,19 @@ To deploy this project, you will need to do the following steps:
     2. `EMAIL_PASSWORD`: The password of the Gmail account. It's highly recommended that you [create an App Password](https://support.google.com/mail/answer/185833?hl=en-US) for that.
     3. `GOOGLE_SPREADSHEET_ID`: The Google Spreadsheet `ID`.
     4. `GOOGLE_SPREADSHEET_GID`: The Google Spreadsheet `Grid ID`.
-    5. `USER_AGENT`: The user-agent to be used by the scraper script. You can use [your own user-agent](https://www.whatismybrowser.com/detect/what-is-my-user-agent/) if you want.
+    5. `TELEGRAM_BOT_ID`: The Telegram Bot ID.
+    6. `USER_AGENT`: The user-agent to be used by the scraper script. You can use [your own user-agent](https://www.whatismybrowser.com/detect/what-is-my-user-agent/) if you want.
 6. Update [the cron job frequency](https://github.com/WeRules/home-finder-script/blob/main/.github/workflows/run-task.yml#L5) to match your needs.
 7. Push your changes to the `main` branch and the script will automatically run accordingly with the cron job settings.
 
 ## Release Notes
+- **v0.3.0:**
+   - Add Telegram notifications support
 - **v0.2.0:**
    - Add check for valid email and valid URL
    - Add bugs to fix later
 - **v0.1.0:**
    - First version
+
+## Donate
+Do you like this project? [🥤 Buy me a soda](https://bunq.me/BuyMeASoda)
