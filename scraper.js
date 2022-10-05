@@ -207,7 +207,7 @@ const runPuppeteer = async (url, email) => {
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
-        const dateText = anchor?.querySelector('div')?.innerText;
+        const dateText = anchor?.querySelector('div')?.innerText || anchor?.querySelector('div')?.innerHTML;
         let path = anchor?.href;
 
         if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('vbo.nl'))) {
@@ -217,7 +217,7 @@ const runPuppeteer = async (url, email) => {
         if (
           path &&
           !pastResults[email]?.includes(path) &&
-          dateText?.toLowerCase()?.includes('nieuw')
+            (dateText?.toLowerCase()?.includes('nieuw') || dateText?.toLowerCase()?.includes('new'))
         ) {
           results[email].push(path);
         }
@@ -299,10 +299,10 @@ const runPuppeteer = async (url, email) => {
     } catch (e) {
       console.log(e);
     }
-  } else if (url.includes('pararius.nl/')) {
+  } else if (url.includes('pararius.nl/') || url.includes('pararius.com/')) {
     try {
       // console.log('parsing pararius.nl data');
-      await page.waitForSelector('.search-list__item--listing', {
+      await page.waitForSelector('.search-list', {
         timeout: TIMEOUT,
         visible: true,
       });
@@ -317,17 +317,17 @@ const runPuppeteer = async (url, email) => {
 
       for (const div of result) {
         const anchor = div?.querySelector('a');
-        const dateText = div?.querySelector('.listing-label--new')?.innerText;
+        const dateText = div?.querySelector('.listing-label--new')?.innerText || div?.querySelector('.listing-label--new')?.innerHTML;
         let path = anchor?.href;
 
-        if (!(path.startsWith('http') || path.startsWith('www') || path.startsWith('pararius.nl'))) {
+        if (!(path.startsWith('http') || path.startsWith('www') || (path.startsWith('pararius.nl') || path.startsWith('pararius.com')))) {
           path = `https://www.pararius.nl${path}`;
         }
 
         if (
           path &&
           !pastResults[email]?.includes(path) &&
-          dateText?.toLowerCase().includes('nieuw')
+          (dateText?.toLowerCase()?.includes('nieuw') || dateText?.toLowerCase()?.includes('new'))
         ) {
           results[email].push(path);
         }
