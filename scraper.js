@@ -105,12 +105,15 @@ const scrape = async (urls, email, secret, telegramGroupId) => {
         }),
       });
     }
+
+    results[email] = [];
+    return Promise.resolve();
   }
 };
 
 const sendEmail = async (links, email, secret) => {
   if (!validateEmail(email)) {
-    return;
+    return Promise.resolve();
   }
 
   const transporter = nodemailer.createTransport({
@@ -134,7 +137,7 @@ const sendEmail = async (links, email, secret) => {
       }).join('\n')),
   };
 
-  transporter.sendMail(mailOptions, function (error, info) {
+  return transporter.sendMail(mailOptions, function (error, info) {
     if (error) {
       console.log(error);
     } else {

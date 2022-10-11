@@ -24,6 +24,8 @@ To deploy this project, you will need to do the following steps:
 7. Push your changes to the `main` branch and the script will automatically run accordingly with the cron job settings.
 
 ## Release Notes
+- **v0.3.3:**
+   - Fix double notification/email problem
 - **v0.3.2:**
    - Fix parsing Pararius data
 - **v0.3.1:**

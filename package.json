@@ -1,6 +1,6 @@
 {
     "name": "home-finder-script",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "description": "Home Finder Script",
     "main": "index.js",
     "author": "Pablo Pirata",
@@ -19,7 +19,7 @@
         "jsdom": "^20.0.1",
         "node-fetch": "^2.6.7",
         "nodemailer": "^6.8.0",
-        "puppeteer": "^18.2.0",
+        "puppeteer": "^18.2.1",
         "valid-url": "^1.0.9",
         "xlsx": "^0.18.5"
     }
