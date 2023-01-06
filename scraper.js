@@ -9,7 +9,6 @@ const jsdom = require('jsdom');
 const { read, utils } = require('xlsx');
 const nodeFetch = require('node-fetch');
 const nodemailer = require('nodemailer');
-const validUrl = require('valid-url');
 const { validate: validateEmail } = require('email-validator');
 
 const WIDTH = 1920;
@@ -42,6 +41,15 @@ const pastResults = JSON.parse(data) || [];
 // console.log('pastResults:', pastResults);
 const results = {};
 
+const stringIsAValidUrl = (s) => {
+  try {
+    new URL(s);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
 const runTask = async () => {
   const spreadsheet = await downloadSpreadsheetFile(GOOGLE_SPREADSHEET_ID, GOOGLE_SPREADSHEET_GID);
   const workbook = read(await spreadsheet.arrayBuffer(), { type: 'array' });
@@ -55,6 +63,7 @@ const runTask = async () => {
       continue;
     }
 
+    // console.log(row.links, stringIsAValidUrl(row.links));
     await scrape(row.links.split('\n'), row.email, row.secret, row.telegram_group_id);
   }
 };
@@ -69,7 +78,7 @@ const scrape = async (urls, email, secret, telegramGroupId) => {
   }
 
   for (const url of urls) {
-    if (validUrl.isUri(url)) {
+    if (stringIsAValidUrl(url)) {
       await runPuppeteer(url, email);
     }
   }
