@@ -24,7 +24,7 @@ To deploy this project, you will need to do the following steps:
 
 ## Release Notes
 - **v0.3.4:**
-   - Remove unecessary node libraries
+   - Remove unnecessary node libraries
 - **v0.3.3:**
    - Fix double notification/email problem
 - **v0.3.2:**
