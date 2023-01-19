@@ -55,6 +55,9 @@ const runTask = async () => {
   const sheetName = workbook.SheetNames[0];
   const spreadsheetData = utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
+  // This means that if the same email has 2 separate Telegram groups, it will only send to one of them
+  // this is a bug that I dont bother to fix it now because it will probably never happen
+  // feel free to fix it yourself if you're reading this
   const groupedData = Object.entries(spreadsheetData.reduce((acc, currentValue) => {
     if (!acc[currentValue.email]) {
       acc[currentValue.email] = {
@@ -75,7 +78,7 @@ const runTask = async () => {
       continue;
     }
 
-    await scrape(row.links.split('\n'), email, row.secret, row.telegram_group_id);
+    await scrape(row.links, email, row.secret, row.telegram_group_id);
   }
 };
 
