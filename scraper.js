@@ -38,7 +38,6 @@ try {
 }
 
 const pastResults = JSON.parse(data) || [];
-// console.log('pastResults:', pastResults);
 const results = {};
 
 const stringIsAValidUrl = (s) => {
@@ -56,15 +55,27 @@ const runTask = async () => {
   const sheetName = workbook.SheetNames[0];
   const spreadsheetData = utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
+  const groupedData = Object.entries(spreadsheetData.reduce((acc, currentValue) => {
+    if (!acc[currentValue.email]) {
+      acc[currentValue.email] = {
+        links: [...currentValue.links.split('\n')],
+        secret: currentValue.secret,
+        telegram_group_id: currentValue.telegram_group_id
+      }
+    } else {
+      acc[currentValue.email].links.push(...currentValue.links.split('\n'));
+    }
+    return acc;
+  }, {}));
+
   const disableds = spreadsheetData.filter((row) => row.disable?.toLowerCase() === 'true').map((row) => row.secret);
-  for (const row of spreadsheetData) {
+  for (const [email, row] of groupedData) {
     if (disableds.includes(row.secret)) {
       // TODO clean-up db.json database
       continue;
     }
 
-    // console.log(row.links, stringIsAValidUrl(row.links));
-    await scrape(row.links.split('\n'), row.email, row.secret, row.telegram_group_id);
+    await scrape(row.links.split('\n'), email, row.secret, row.telegram_group_id);
   }
 };
 
@@ -83,10 +94,8 @@ const scrape = async (urls, email, secret, telegramGroupId) => {
     }
   }
 
-  // console.log('results:', results);
-
   if (results[email].length > 0) {
-    writeFileSync(
+    await writeFileSync(
       path.resolve(__dirname, 'db.json'),
       JSON.stringify({
         ...pastResults,
@@ -96,28 +105,31 @@ const scrape = async (urls, email, secret, telegramGroupId) => {
         ]
       })
     );
-  }
 
-  if (results[email].length > 0) {
-    await sendEmail(results[email], email, secret);
+    if (EMAIL_USER && EMAIL_PASSWORD) {
+      await sendEmail(results[email], email, secret);
+    }
 
     if (TELEGRAM_BOT_ID) {
-      await nodeFetch(`https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `New houses found:\n\n${results[email].join('\n')}`,
-          "chat_id": telegramGroupId,
-          "parse_mode": "markdown",
-        }),
-      });
+      for (const result of results[email]) {
+        await nodeFetch(`https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: `New houses found:\n\n${result}`,
+            "chat_id": telegramGroupId,
+            "parse_mode": "markdown",
+          }),
+        });
+      }
     }
 
     results[email] = [];
-    return Promise.resolve();
   }
+
+  return Promise.resolve();
 };
 
 const sendEmail = async (links, email, secret) => {
@@ -138,7 +150,6 @@ const sendEmail = async (links, email, secret) => {
     from: EMAIL_USER,
     to: email,
     subject: 'New Houses Found',
-    // text: links.join('\n'),
     html: htmlTemplate
       .replace('{{SECRET}}', secret)
       .replace('{{LINKS_LIST}}', links.map((link) => {
@@ -156,7 +167,6 @@ const sendEmail = async (links, email, secret) => {
 };
 
 const runPuppeteer = async (url, email) => {
-  // console.log('opening headless browser');
   const browser = await puppeteer.launch({
     headless: true,
     args: [`--window-size=${WIDTH},${HEIGHT}`],
@@ -170,13 +180,11 @@ const runPuppeteer = async (url, email) => {
   // https://stackoverflow.com/a/51732046/4307769 https://stackoverflow.com/a/68780400/4307769
   await page.setUserAgent(USER_AGENT);
 
-  // console.log('going to website', url);
   await page.goto(url, {waitUntil: 'domcontentloaded'});
   await page.waitForNetworkIdle();
 
   if (url.includes('funda.nl/')) {
     try {
-      // console.log('parsing funda.nl data');
       await page.waitForSelector('.search-result', {
         timeout: TIMEOUT,
         visible: true,
@@ -203,7 +211,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('vbo.nl/')) {
     try {
-      // console.log('parsing vbo.nl data');
       await page.waitForSelector('#propertiesWrapper', {
         timeout: TIMEOUT,
         visible: true,
@@ -239,7 +246,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('huislijn.nl/')) {
     try {
-      // console.log('parsing huislijn.nl data');
       await page.waitForSelector('.hl-search-object-display', {
         timeout: TIMEOUT,
         visible: true,
@@ -269,7 +275,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('zah.nl/')) {
     try {
-      // console.log('parsing zah.nl data');
       await page.waitForNavigation({
         waitUntil: 'load',
         timeout: TIMEOUT,
@@ -281,10 +286,6 @@ const runPuppeteer = async (url, email) => {
 
       const htmlString = await page.content();
       const dom = new jsdom.JSDOM(htmlString);
-      // writeFileSync(
-      //   path.resolve(__dirname, 'test.html'),
-      //   htmlString
-      // );
 
       const result =
         dom.window.document
@@ -313,7 +314,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('pararius.nl/') || url.includes('pararius.com/')) {
     try {
-      // console.log('parsing pararius.nl data');
       await page.waitForSelector('.search-list', {
         timeout: TIMEOUT,
         visible: true,
@@ -349,7 +349,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('jaap.nl/')) {
     try {
-      // console.log('parsing jaap.nl data');
       await page.waitForSelector('.property-list', {
         timeout: TIMEOUT,
         visible: true,
@@ -380,7 +379,6 @@ const runPuppeteer = async (url, email) => {
     }
   } else if (url.includes('hoekstraenvaneck.nl/')) {
     try {
-      // console.log('parsing hoekstraenvaneck.nl data');
       await page.waitForSelector('.overzicht', {
         timeout: TIMEOUT,
         visible: true,
@@ -411,7 +409,6 @@ const runPuppeteer = async (url, email) => {
     }
   }
 
-  // console.log('closing browser');
   await browser.close();
 };
 

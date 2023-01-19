@@ -2,6 +2,7 @@
 This is the "backend" scraping script for the [Home Finder](https://github.com/WeRules/home-finder) project.
 
 ## How to deploy this project
+
 If you want to also deploy the frontend website, [read it here](https://github.com/WeRules/home-finder#how-to-deploy).
 
 To deploy this project, you will need to do the following steps:
@@ -23,6 +24,9 @@ To deploy this project, you will need to do the following steps:
 7. Push your changes to the `main` branch and the script will automatically run accordingly with the cron job settings.
 
 ## Release Notes
+- **v0.3.5:**
+   - Bump packages versions
+   - Update sorting algorithm
 - **v0.3.4:**
    - Remove unnecessary node libraries
 - **v0.3.3:**
